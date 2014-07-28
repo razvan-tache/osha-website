@@ -1,117 +1,133 @@
 <?php
+
+/**
+ * Class MigrateOshaCategories migrates categories.json taxonomy. The data
+ * is stored inside the <em>Tags</em> taxonomy.
+ *
+ * Part of the <em>OSHA Taxonomies</em> translation group
+ */
 class MigrateOshaCategories extends DynamicMigration {
-    protected $vocabulary = NULL;
 
-    public function __construct($arguments) {
-        parent::__construct();
+  /** @var string Target vocabulary */
+  protected $vocabulary = TAXONOMY_CATEGORIES;
 
-        $this->description = 'Import "Tags" taxonomy from JSON file';
-        $this->vocabulary = 'tags';
-        $file_name = $arguments['file_name'];
-        $source_file = sprintf("%s/%s", drupal_get_path('module', 'osha_migration'), $file_name);
+  public function __construct($arguments) {
+    parent::__construct(MigrateGroup::getInstance('OSHA Taxonomies'));
 
-        $this->map = new MigrateSQLMap(
-            $this->machineName,
-            array(
-                'code' => array(
-                    'type' => 'varchar',
-                    'length' => 100,
-                    'not null' => TRUE,
-                    'description' => 'Categories code'
-                )
-            ),
-            MigrateDestinationTerm::getKeySchema()
-        );
+    $this->description = 'Import "Tags" taxonomy from JSON file';
 
-        $this->source = new MigrateSourceList(
-            new CategoriesTaxonomyMigrationListJSON($source_file),
-            new CategoriesTaxonomyMigrationItemJSON($source_file, array()),
-            $this->fields()
-        );
+    $file_name = $arguments['file_name'];
+    $source_file = sprintf("%s/%s", drupal_get_path('module', 'osha_migration'), $file_name);
 
-        $term_options = MigrateDestinationTerm::options('en', 'text', TRUE);
-        $this->destination = new MigrateDestinationTerm($this->vocabulary, $term_options);
+    $this->map = new MigrateSQLMap(
+      $this->machineName,
+      array(
+        'code' => array(
+          'type' => 'varchar',
+          'length' => 100,
+          'not null' => TRUE,
+          'description' => 'Categories code'
+        )
+      ),
+      MigrateDestinationTerm::getKeySchema()
+    );
 
-        $this->addFieldMapping('field_tags_code', 'code');
-        $this->addFieldMapping('parent', 'parent');
-        $this->addFieldMapping('format')->defaultValue('plain_text');
-        $this->addFieldMapping('name', 'en');
-        $this->addFieldMapping('description_field:format')->defaultValue('plain_text');
-    }
+    $this->source = new MigrateSourceList(
+      new CategoriesTaxonomyMigrationListJSON($source_file),
+      new CategoriesTaxonomyMigrationItemJSON($source_file, array()),
+      $this->fields()
+    );
 
-    public function prepareRow($row) {
-        $row->parent = 0;
-        $row->language = 'en';
+    $term_options = MigrateDestinationTerm::options('en', 'text', TRUE);
+    $this->destination = new MigrateDestinationTerm($this->vocabulary, $term_options);
 
-        return TRUE;
-    }
+    $this->addFieldMapping('field_tags_code', 'code');
+    $this->addFieldMapping('parent', 'parent');
+    $this->addFieldMapping('format')->defaultValue('plain_text');
+    $this->addFieldMapping('name', 'en');
+    $this->addFieldMapping('description_field:format')->defaultValue('plain_text');
+    $this->addUnmigratedDestinations(array(
+      'weight',
+      'description_field',
+      'description_field:summary',
+      'description_field:language',
+      'field_tags_code:language',
+      'name_field',
+      'name_field:language',
+      'parent_name',
+      'description',
+      'path'
+    ));
+  }
 
-    public function prepare($entity, stdClass $row) {
-        $entity->language = 'en';
-        $translationsData = array();
-        $languages = array(
-            'bg', 'cs', 'da', 'de', 'el',
-            'en', 'es', 'et', 'fi', 'fr',
-            'hr', 'hu', 'it', 'is', 'lt',
-            'lv', 'mt', 'nl', 'no', 'pl',
-            'pt', 'ro', 'sk', 'el', 'sv'
-        );
+  public function prepareRow($row) {
+    $row->parent = 0;
+    $row->language = 'en';
+    return TRUE;
+  }
 
-        foreach($languages as $language) {
-            if(!empty($row->$language)) {
-                $entity->name_field[$language][0]['value'] = $row->$language;
-                $entity->description_field[$language][0]['value'] = $row->$language;
-                $sourceLanguage = ($language == 'en' ? '' : 'en');
-                $translationsData[$language] = array(
-                    'entity_type' => 'term',
-                    'language' => $language,
-                    'source' => $sourceLanguage,
-                    'uid' => '1',
-                    'status' => '1',
-                    'translate' => '0',
-                );
-            }
-            $entity->translations = (object)array(
-                'original' => 'en',
-                'data' => $translationsData
-            );
+  public function prepare($entity, stdClass $row) {
+    $migration = Migration::currentMigration();
+    $entity_type = $migration->getDestination()->getEntityType();
+    $translation_handler = entity_translation_get_handler($entity_type, $entity);
+    $entity->translations = $translation_handler->getTranslations();
+    $supported_languages = array_keys(language_list());
+    foreach ($supported_languages as $lang_code) {
+      if (!empty($row->$lang_code)) {
+        $entity->name_field[$lang_code][0]['value'] = $row->$lang_code;
+        $entity->description_field[$lang_code][0]['value'] = $row->$lang_code;
+        if($lang_code != $row->language) { // Don't translate default language (en)
+          if (!isset($entity->translations->data[$entity->$lang_code])) {
+            $changed = (property_exists($entity, 'changed')) ? $entity->changed : time();
+            $translation_handler->setTranslation(array(
+              'translate' => 0, 'status' => 1, 'uid' => 1,
+              'language' => $lang_code, 'source' => $row->language,
+              'created' => time(), 'changed' => $changed,
+            ));
+          }
         }
+      }
     }
+    // Preserve original language setting
+    $entity->field_language = $entity->language;
+    $entity->language = $entity->translations->original;
+  }
 
-    private function fields() {
-        return array(
-            'code' => 'The unique identifier',
-            'en' => 'The description/name of the item',
-        );
-    }
+  private function fields() {
+    return array(
+      'code' => 'Identifier',
+      'en' => 'Term name in english',
+      'parent' => 'Parent term',
+    );
+  }
 
-    protected function generateMachineName($class_name = NULL) {
-        return 'TagsTaxonomy';
-    }
+  protected function generateMachineName() {
+    return 'TagsTaxonomy';
+  }
 }
 
 class CategoriesTaxonomyMigrationListJSON extends MigrateListJSON {
-    protected function getIDsFromJSON(array $data) {
-        $ids = array();
-        foreach($data as $item) {
-            $ids[] = $item['code'];
-        }
-        return $ids;
+  protected function getIDsFromJSON(array $data) {
+    $ids = array();
+    foreach ($data as $item) {
+      $ids[] = $item['code'];
     }
+    return $ids;
+  }
 }
 
 class CategoriesTaxonomyMigrationItemJSON extends MigrateItemJSON {
-    protected $data = array();
+  protected $data = array();
 
-    public function getItem($id) {
-        if(empty($this->data)) {
-            $data = $this->loadJSONUrl($this->itemUrl);
-            if($data) {
-                foreach($data as $item) {
-                    $this->data[$item->code] = $item;
-                }
-            }
+  public function getItem($item_id) {
+    if (empty($this->data)) {
+      $data = $this->loadJSONUrl($this->itemUrl);
+      if ($data) {
+        foreach ($data as $item) {
+          $this->data[$item->code] = $item;
         }
-        return isset($this->data[$id]) ? $this->data[$id] : NULL;
+      }
     }
+    return isset($this->data[$item_id]) ? $this->data[$item_id] : NULL;
+  }
 }
