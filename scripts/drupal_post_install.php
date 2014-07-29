@@ -110,18 +110,29 @@ function change_field_size() {
             array('type' => 'varchar','length' => $column_size)
         );
     }
-
     if(osha_get_mysql_column_size('field_data_name_field', 'name_field_value') < $column_size) {
         drupal_set_message("Changing field_data_name size to $column_size");
         db_change_field('field_data_name_field', 'name_field_value', 'name_field_value',
             array('type' => 'varchar', 'length' => $column_size)
         );
     }
-
     if(osha_get_mysql_column_size('field_revision_name_field', 'name_field_value') < $column_size) {
         drupal_set_message("Changing field_revision_name size to $column_size");
         db_change_field('field_revision_name_field', 'name_field_value', 'name_field_value',
             array('type' => 'varchar','length' => $column_size)
         );
     }
+	$column_size = 2000;
+	if (osha_get_mysql_column_size('field_data_title_field', 'title_field_value') < $column_size) {
+		drupal_set_message("Changing field_data_name size to $column_size");
+		db_change_field('field_data_title_field', 'title_field_value', 'title_field_value',
+			array('type' => 'varchar', 'length' => $column_size)
+		);
+	}
+	if (osha_get_mysql_column_size('field_revision_title_field', 'title_field_value') < $column_size) {
+		drupal_set_message("Changing field_revision_name size to $column_size");
+		db_change_field('field_revision_title_field', 'title_field_value', 'title_field_value',
+			array('type' => 'varchar', 'length' => $column_size)
+		);
+	}
 }
