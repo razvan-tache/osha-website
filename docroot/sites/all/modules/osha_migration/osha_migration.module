@@ -16,37 +16,47 @@ define('CLASS_THESAURUS', 'MigrateOshaThesaurus');
  * your migration classes to be recognized by the Migrate module.
  */
 function osha_migration_migrate_api() {
-  $api = array(
-    'api' => 2,
-    'migrations' => array(
-      'News' => array('class_name' => 'MigrateOshaNews'),
-      'NaceCodes' => array(
-        'class_name' => 'MigrateOshaNaceCodes',
-        'file_name' => 'data/nace_codes.json',
-        'group_name' => 'OSHA MIGRATIONS'
-      ),
-      'EsenerTaxonomy' => array(
-        'class_name' => 'MigrateOshaEsenerTaxonomy',
-        'file_name' => 'data/esener.json',
-        'group_name' => 'OSHA MIGRATIONS'
-      ),
-      'PublicationTypesTaxonomy' => array(
-        'class_name' => 'MigrateOshaPublicationTypesTaxonomy',
-        'group_name' => 'OSHA MIGRATIONS'
-      ),
-      'ThesaurusTaxonomy' => array(
-        'class_name' => 'MigrateOshaThesaurus',
-        'file_name' => 'data/OSHA-MultilingualThesaurus.json',
-        'group_name' => 'OSHA MIGRATION'
-      ),
-      'TagsTaxonomy' => array(
-        'class_name' => 'MigrateOshaCategories',
-        'file_name' => 'data/categories.json',
-        'group_name' => 'OSHA MIGRATION'
-      )
-    )
-  );
-  return $api;
+	$api = array(
+		'api' => 2,
+		'migrations' => array(
+			'News' => array('class_name' => 'MigrateOshaNews'),
+            'NaceCodes' => array(
+                'class_name' => 'MigrateOshaNaceCodes',
+                'file_name' => 'data/nace_codes.json',
+                'group_name' => 'OSHA MIGRATION'
+            ),
+            'EsenerTaxonomy' => array(
+                'class_name' => 'MigrateOshaEsenerTaxonomy',
+                'file_name' => 'data/esener.json',
+                'group_name' => 'OSHA MIGRATION'
+            ),
+						'PublicationTypesTaxonomy' => array(
+                'class_name' => 'MigrateOshaPublicationTypesTaxonomy',
+                'group_name' => 'OSHA MIGRATION'
+            ),
+            'ThesaurusTaxonomy' => array(
+                'class_name' => 'MigrateOshaThesaurus',
+                'file_name' => 'data/OSHA-MultilingualThesaurus.json',
+                'group_name' => 'OSHA MIGRATION'
+            ),
+            'TagsTaxonomy' => array(
+                'class_name' => 'MigrateOshaCategories',
+                'file_name' => 'data/categories.json',
+                'group_name' => 'OSHA MIGRATION'
+            ),
+            'PublicationsContentType' => array(
+                'class_name' => 'OshaMigratePublications',
+                'file_name' => 'data/test/publications.txt',
+                'group_name' => 'OSHA MIGRATION'
+            ),
+						'PublicationsFiles' => array(
+								'class_name' => 'OshaMigratePublicationsFiles',
+								'file_name' => 'data/test/publications.txt',
+								'group_name' => 'OSHA MIGRATION'
+						)
+		)
+	);
+	return $api;
 }
 
 /**
